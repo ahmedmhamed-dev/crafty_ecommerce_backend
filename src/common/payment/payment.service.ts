@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StripeGateway } from './gateways/stripe.gateway';
 import { PayPalGateway } from './gateways/paypal.gateway';
 import { BankTransferGateway } from './gateways/bank-transfer.gateway';
+import { CodGateway } from './gateways/cod.gateway';
 import {
   PaymentGateway,
   PaymentResponse,
@@ -23,10 +24,12 @@ export class PaymentService {
     private stripeGateway: StripeGateway,
     private paypalGateway: PayPalGateway,
     private bankTransferGateway: BankTransferGateway,
+    private codGateway: CodGateway,
   ) {
     this.gateways.set('stripe', this.stripeGateway);
     this.gateways.set('paypal', this.paypalGateway);
     this.gateways.set('bank_transfer', this.bankTransferGateway);
+    this.gateways.set('cod', this.codGateway);
   }
 
   getGateway(method: string): PaymentGateway {
@@ -112,6 +115,36 @@ export class PaymentService {
     return status;
   }
 
+  async confirmCodPayment(transactionId: string, deliveryCode?: string): Promise<PaymentStatus> {
+    // COD specific: confirm when delivered
+    const status = await this.codGateway.confirmPayment(transactionId, deliveryCode);
+
+    const payment = await this.prisma.payment.findFirst({
+      where: { transactionId },
+    });
+
+    if (payment) {
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: status.status as any,
+          paidAt: status.paidAt,
+          paymentData: JSON.stringify(status.rawResponse),
+        },
+      });
+
+      if (status.status === 'COMPLETED') {
+        await this.prisma.order.update({
+          where: { id: payment.orderId },
+          data: { status: 'CONFIRMED' },
+        });
+      }
+    }
+
+    this.logger.log(`COD payment confirmed: ${transactionId}`);
+    return status;
+  }
+
   async refundPayment(transactionId: string, method: string, amount?: number): Promise<RefundResponse> {
     const gateway = this.getGateway(method);
     const response = await gateway.refundPayment(transactionId, amount);
@@ -145,11 +178,12 @@ export class PaymentService {
     return this.stripeGateway.handleWebhook(payload, signature);
   }
 
-  async getAvailableMethods(): Promise<{ name: string; label: string }[]> {
+  async getAvailableMethods(): Promise<{ name: string; label: string; type: string }[]> {
     return [
-      { name: 'stripe', label: 'Credit/Debit Card (Stripe)' },
-      { name: 'paypal', label: 'PayPal' },
-      { name: 'bank_transfer', label: 'Bank Transfer' },
+      { name: 'stripe', label: 'Credit/Debit Card', type: 'online' },
+      { name: 'paypal', label: 'PayPal', type: 'online' },
+      { name: 'bank_transfer', label: 'Bank Transfer', type: 'offline' },
+      { name: 'cod', label: 'Cash on Delivery', type: 'offline' },
     ];
   }
 }
