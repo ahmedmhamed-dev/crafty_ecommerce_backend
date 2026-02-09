@@ -1,0 +1,132 @@
+{
+	"info": {
+		"_postman_id": "crafty-ecommerce-api",
+		"name": "Crafty E-Commerce API",
+		"description": "Multi-vendor e-commerce backend API with NestJS, PostgreSQL, and Prisma",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+		{ "key": "apiVersion", "value": "/api/v1", "type": "string" },
+		{ "key": "token", "value": "", "type": "string" },
+		{ "key": "userId", "value": "", "type": "string" },
+		{ "key": "vendorId", "value": "", "type": "string" },
+		{ "key": "productId", "value": "", "type": "string" }
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+	},
+	"item": [
+		{
+			"name": "Health Checks",
+			"item": [
+				{ "name": "GET /health", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] } }, "response": [] },
+				{ "name": "GET /health/ready", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/health/ready", "host": ["{{baseUrl}}"], "path": ["health", "ready"] } }, "response": [] },
+				{ "name": "GET /health/live", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/health/live", "host": ["{{baseUrl}}"], "path": ["health", "live"] } }, "response": [] }
+			]
+		},
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "POST Register",
+					"event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.accessToken) pm.collectionVariables.set('token', jsonData.accessToken);", "if (jsonData.user && jsonData.user.id) pm.collectionVariables.set('userId', jsonData.user.id);"], "type": "text/javascript" } }],
+					"request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"newuser@example.com\",\"password\":\"password123\",\"firstName\":\"New\",\"lastName\":\"User\"}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/auth/register", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "auth", "register"] } }, "response": []
+				},
+				{
+					"name": "POST Login",
+					"event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.accessToken) pm.collectionVariables.set('token', jsonData.accessToken);"], "type": "text/javascript" } }],
+					"request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"testuser5@example.com\",\"password\":\"password123\"}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/auth/login", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "auth", "login"] } }, "response": []
+				},
+				{ "name": "GET Profile", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/auth/profile", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "auth", "profile"] } }, "response": [] }
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{ "name": "GET Profile", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/users/profile", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "users", "profile"] } }, "response": [] },
+				{ "name": "PUT Profile", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"firstName\":\"Updated\",\"lastName\":\"Name\",\"phone\":\"+1234567890\"}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/users/profile", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "users", "profile"] } }, "response": [] },
+				{ "name": "GET All Users (Admin)", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/users", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "users"] } }, "response": [] }
+			]
+		},
+		{
+			"name": "Vendors",
+			"item": [
+				{
+					"name": "POST Create Vendor",
+					"event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.id) pm.collectionVariables.set('vendorId', jsonData.id);"], "type": "text/javascript" } }],
+					"request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"storeName\":\"My Awesome Store\",\"description\":\"We sell amazing products\"}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/vendors", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "vendors"] } }, "response": []
+				},
+				{ "name": "GET My Profile", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/vendors/me", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "vendors", "me"] } }, "response": [] },
+				{ "name": "PUT Update Vendor", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"storeName\":\"Updated Store\",\"description\":\"Updated description\"}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/vendors/me", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "vendors", "me"] } }, "response": [] },
+				{ "name": "GET All Vendors", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/vendors", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "vendors"] } }, "response": [] }
+			]
+		},
+		{
+			"name": "Products",
+			"item": [
+				{ "name": "GET All Products", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/products", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "products"] } }, "response": [] },
+				{
+					"name": "POST Create Product",
+					"event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.id) pm.collectionVariables.set('productId', jsonData.id);"], "type": "text/javascript" } }],
+					"request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"name\":\"New Product\",\"description\":\"Description\",\"price\":99.99,\"categoryId\":\"cat-electronics\",\"sku\":\"PROD001\",\"quantity\":100}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/products", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "products"] } }, "response": []
+				},
+				{ "name": "GET My Products", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/products/vendor/me", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "products", "vendor", "me"] } }, "response": [] }
+			]
+		},
+		{
+			"name": "Categories",
+			"item": [
+				{ "name": "GET All Categories", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/categories", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "categories"] } }, "response": [] },
+				{ "name": "POST Create Category", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"name\":\"New Category\",\"description\":\"Category description\"}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/categories", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "categories"] } }, "response": [] }
+			]
+		},
+		{
+			"name": "Cart",
+			"item": [
+				{ "name": "GET Cart", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/cart", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "cart"] } }, "response": [] },
+				{ "name": "POST Add to Cart", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"productId\":\"{{productId}}\",\"quantity\":2}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/cart", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "cart"] } }, "response": [] },
+				{ "name": "DELETE Clear Cart", "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/cart", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "cart"] } }, "response": [] }
+			]
+		},
+		{
+			"name": "Orders",
+			"item": [
+				{ "name": "POST Create Order", "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/orders", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "orders"] } }, "response": [] },
+				{ "name": "GET My Orders", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/orders", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "orders"] } }, "response": [] },
+				{ "name": "GET All Orders (Admin)", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/orders/all", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "orders", "all"] } }, "response": [] }
+			]
+		},
+		{
+			"name": "Reviews",
+			"item": [
+				{ "name": "POST Create Review", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"productId\":\"{{productId}}\",\"rating\":5,\"title\":\"Great product!\",\"comment\":\"I love this product\"}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/reviews", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "reviews"] } }, "response": [] },
+				{ "name": "GET Product Reviews", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/reviews/product/{{productId}}", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "reviews", "product", "{{productId}}"] } }, "response": [] }
+			]
+		},
+		{
+			"name": "Wishlist",
+			"item": [
+				{ "name": "GET Wishlist", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/wishlist", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "wishlist"] } }, "response": [] },
+				{ "name": "POST Add to Wishlist", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"productId\":\"{{productId}}\"}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/wishlist", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "wishlist"] } }, "response": [] },
+				{ "name": "DELETE Remove", "request": { "method": "DELETE", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/wishlist/{{productId}}", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "wishlist", "{{productId}}"] } }, "response": [] }
+			]
+		},
+		{
+			"name": "Addresses",
+			"item": [
+				{ "name": "POST Create Address", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address1\":\"123 Main St\",\"city\":\"San Francisco\",\"state\":\"CA\",\"postalCode\":\"94102\",\"country\":\"USA\"}", "options": { "raw": { "language": "json" } } }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/addresses", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "addresses"] } }, "response": [] },
+				{ "name": "GET Addresses", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/addresses", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "addresses"] } }, "response": [] }
+			]
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{ "name": "GET Dashboard", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "admin", "dashboard"] } }, "response": [] },
+				{ "name": "GET Pending Vendors", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/admin/pending-vendors", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "admin", "pending-vendors"] } }, "response": [] },
+				{ "name": "GET Pending Products", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}{{apiVersion}}/admin/pending-products", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "admin", "pending-products"] } }, "response": [] }
+			]
+		}
+	]
+}

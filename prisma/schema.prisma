@@ -1,0 +1,337 @@
+// Prisma schema for Multi-Vendor E-Commerce Backend
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User roles: CUSTOMER, VENDOR, ADMIN
+enum Role {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+
+// Order status
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+// Payment status
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// Vendor status
+enum VendorStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+// Product status
+enum ProductStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+// ==================== USER MODEL ====================
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  phone         String?
+  avatar        String?
+  role          Role      @default(CUSTOMER)
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  vendor        Vendor?
+  addresses     Address[]
+  orders        Order[]
+  cart          CartItem[]
+  wishlist      Wishlist[]
+  reviews       Review[]
+
+  @@map("users")
+}
+
+// ==================== VENDOR MODEL ====================
+model Vendor {
+  id              String        @id @default(uuid())
+  userId          String        @unique
+  storeName       String
+  storeSlug       String        @unique
+  description     String?
+  logo            String?
+  banner          String?
+  phone           String?
+  email           String?
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  postalCode      String?
+  bankName        String?
+  bankAccount     String?
+  bankRouting     String?
+  taxNumber       String?
+  commissionRate  Float         @default(10) // Platform commission percentage
+  status          VendorStatus @default(PENDING)
+  rating          Float         @default(0)
+  totalSales      Float         @default(0)
+  totalOrders     Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products        Product[]
+  orders          OrderItem[]
+
+  @@map("vendors")
+}
+
+// ==================== CATEGORY MODEL ====================
+model Category {
+  id          String     @id @default(uuid())
+  name        String
+  slug        String     @unique
+  description String?
+  image       String?
+  parentId    String?
+  isActive    Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[]  @relation("CategoryHierarchy")
+  products    Product[]
+
+  @@map("categories")
+}
+
+// ==================== PRODUCT MODEL ====================
+model Product {
+  id           String        @id @default(uuid())
+  vendorId     String
+  categoryId   String
+  name         String
+  slug         String
+  description  String?
+  price        Float
+  comparePrice Float?
+  cost         Float?
+  sku          String?
+  barcode      String?
+  quantity     Int           @default(0)
+  lowStock     Int           @default(10)
+  weight       Float?
+  dimensions   String?       // JSON string for length, width, height
+  status       ProductStatus @default(DRAFT)
+  isFeatured   Boolean       @default(false)
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Relations
+  vendor       Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category     Category      @relation(fields: [categoryId], references: [id])
+  images       ProductImage[]
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+  wishlist     Wishlist[]
+  reviews      Review[]
+
+  @@unique([vendorId, slug])
+  @@map("products")
+}
+
+// ==================== PRODUCT IMAGE MODEL ====================
+model ProductImage {
+  id         String   @id @default(uuid())
+  productId  String
+  url        String
+  alt        String?
+  isPrimary  Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  // Relations
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+// ==================== ADDRESS MODEL ====================
+model Address {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String   @default("shipping") // shipping, billing
+  firstName   String
+  lastName    String
+  company     String?
+  address1    String
+  address2    String?
+  city        String
+  state       String
+  postalCode  String
+  country     String
+  phone       String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("addresses")
+}
+
+// ==================== CART MODEL ====================
+model CartItem {
+  id         String   @id @default(uuid())
+  userId     String
+  productId  String
+  quantity   Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("cart_items")
+}
+
+// ==================== ORDER MODEL ====================
+model Order {
+  id              String        @id @default(uuid())
+  orderNumber     String        @unique
+  userId          String
+  status          OrderStatus   @default(PENDING)
+  subtotal        Float
+  tax             Float         @default(0)
+  shippingCost    Float         @default(0)
+  discount        Float         @default(0)
+  total           Float
+  shippingName    String?
+  shippingAddress String?
+  shippingCity    String?
+  shippingState   String?
+  shippingCountry String?
+  shippingZip     String?
+  shippingPhone   String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  user            User          @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+  payment         Payment?
+
+  @@map("orders")
+}
+
+// ==================== ORDER ITEM MODEL ====================
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  productId   String
+  vendorId    String
+  name        String
+  sku         String?
+  price       Float
+  quantity    Int
+  total       Float
+  createdAt   DateTime @default(now())
+
+  // Relations
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id])
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+
+  @@map("order_items")
+}
+
+// ==================== PAYMENT MODEL ====================
+model Payment {
+  id              String        @id @default(uuid())
+  orderId         String        @unique
+  method           String?       // credit_card, paypal, bank_transfer, etc.
+  amount          Float
+  currency        String        @default("USD")
+  status          PaymentStatus @default(PENDING)
+  transactionId   String?
+  paymentData     String?       // JSON for additional payment info
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+// ==================== REVIEW MODEL ====================
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  rating    Int      // 1-5
+  title     String?
+  comment   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("reviews")
+}
+
+// ==================== WISHLIST MODEL ====================
+model Wishlist {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("wishlists")
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true
+  },
+  "jest": {
+    "rootDir": ".",
+    "testRegex": ".e2e-spec.ts$",
+    "roots": ["<rootDir>/src/", "<rootDir>/test/"]
+  }
+}
