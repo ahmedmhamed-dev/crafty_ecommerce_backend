@@ -5,6 +5,12 @@ export class AddToCartDto {
   @ApiProperty()
   @IsUUID()
   productId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  inventoryId?: string;
+
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()
   @IsNumber()
@@ -17,4 +23,9 @@ export class UpdateCartDto {
   @IsNumber()
   @Min(1)
   quantity!: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  inventoryId?: string;
 }

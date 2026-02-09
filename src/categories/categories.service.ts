@@ -12,13 +12,35 @@ export class CategoriesService {
   }
 
   async findAll() {
-    return this.prisma.category.findMany({ where: { isActive: true, parentId: null }, include: { children: true } });
+    const categories = await this.prisma.category.findMany({
+      where: { isActive: true, parentId: null },
+      include: {
+        children: true,
+        _count: { select: { products: true } },
+      },
+    });
+    // Add productCount to each category
+    return categories.map(cat => ({
+      ...cat,
+      productCount: cat._count.products,
+      _count: undefined,
+    }));
   }
 
   async findById(id: string) {
-    const cat = await this.prisma.category.findUnique({ where: { id } });
+    const cat = await this.prisma.category.findUnique({
+      where: { id },
+      include: {
+        children: true,
+        _count: { select: { products: true } },
+      },
+    });
     if (!cat) throw new NotFoundException('Category not found');
-    return cat;
+    return {
+      ...cat,
+      productCount: cat._count.products,
+      _count: undefined,
+    };
   }
 
   async update(id: string, dto: UpdateCategoryDto) {

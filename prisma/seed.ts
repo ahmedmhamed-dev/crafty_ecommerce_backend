@@ -166,7 +166,7 @@ async function main() {
   });
   console.log('✅ Created vendor profiles');
 
-  // Create Products
+  // ========== SIMPLE PRODUCTS (No Variations) ==========
   await Promise.all([
     prisma.product.upsert({
       where: { id: 'prod-iphone15' },
@@ -183,6 +183,7 @@ async function main() {
         quantity: 100,
         status: 'APPROVED',
         isActive: true,
+        hasVariations: false,
       },
     }),
     prisma.product.upsert({
@@ -200,6 +201,7 @@ async function main() {
         quantity: 50,
         status: 'APPROVED',
         isActive: true,
+        hasVariations: false,
       },
     }),
     prisma.product.upsert({
@@ -217,153 +219,247 @@ async function main() {
         quantity: 200,
         status: 'APPROVED',
         isActive: true,
-      },
-    }),
-    prisma.product.upsert({
-      where: { id: 'prod-tshirt' },
-      update: {},
-      create: {
-        id: 'prod-tshirt',
-        vendorId: fashionHub.id,
-        categoryId: 'cat-clothing',
-        name: 'Classic Cotton T-Shirt',
-        slug: 'classic-cotton-tshirt',
-        description: 'Comfortable 100% cotton t-shirt',
-        price: 29.99,
-        sku: 'TSHIRT001',
-        quantity: 500,
-        status: 'APPROVED',
-        isActive: true,
-      },
-    }),
-    prisma.product.upsert({
-      where: { id: 'prod-jeans' },
-      update: {},
-      create: {
-        id: 'prod-jeans',
-        vendorId: fashionHub.id,
-        categoryId: 'cat-clothing',
-        name: 'Slim Fit Denim Jeans',
-        slug: 'slim-fit-denim-jeans',
-        description: 'Modern slim fit denim jeans',
-        price: 79.99,
-        sku: 'JEANS001',
-        quantity: 150,
-        status: 'APPROVED',
-        isActive: true,
-      },
-    }),
-    prisma.product.upsert({
-      where: { id: 'prod-jacket' },
-      update: {},
-      create: {
-        id: 'prod-jacket',
-        vendorId: fashionHub.id,
-        categoryId: 'cat-clothing',
-        name: 'Winter Jacket',
-        slug: 'winter-jacket',
-        description: 'Warm and stylish winter jacket',
-        price: 149.99,
-        sku: 'JACKET001',
-        quantity: 75,
-        status: 'APPROVED',
-        isActive: true,
+        hasVariations: false,
       },
     }),
   ]);
-  console.log('✅ Created 6 products');
+  console.log('✅ Created 3 simple products');
 
-  // Create Sample Addresses
+  // ========== PRODUCT 1: T-SHIRT (Color × Size = 20 SKUs) ==========
+  const tshirtProduct = await prisma.product.upsert({
+    where: { id: 'prod-tshirt' },
+    update: {},
+    create: {
+      id: 'prod-tshirt',
+      vendorId: fashionHub.id,
+      categoryId: 'cat-clothing',
+      name: 'Classic Cotton T-Shirt',
+      slug: 'classic-cotton-tshirt',
+      description: 'Comfortable 100% cotton t-shirt, perfect for everyday wear',
+      price: 29.99,
+      sku: 'TSHIRT001',
+      quantity: 500,
+      status: 'APPROVED',
+      isActive: true,
+      hasVariations: true,
+    },
+  });
+
+  await prisma.productVariation.createMany({
+    data: [
+      { productId: tshirtProduct.id, name: 'Color', options: ['White', 'Black', 'Navy', 'Gray'] },
+      { productId: tshirtProduct.id, name: 'Size', options: ['S', 'M', 'L', 'XL', 'XXL'] },
+    ],
+  });
+
+  const tshirtColorOptions = ['White', 'Black', 'Navy', 'Gray'];
+  const tshirtSizeOptions = ['S', 'M', 'L', 'XL', 'XXL'];
+  for (const color of tshirtColorOptions) {
+    for (const size of tshirtSizeOptions) {
+      await prisma.productInventory.create({
+        data: {
+          productId: tshirtProduct.id,
+          sku: 'TSHIRT-' + color.toUpperCase() + '-' + size,
+          price: color === 'White' ? 24.99 : 29.99,
+          quantity: Math.floor(Math.random() * 50) + 10,
+          lowStock: 5,
+          options: [color, size],
+          isActive: true,
+        },
+      });
+    }
+  }
+  console.log('✅ Created T-Shirt with 20 SKU variations');
+
+  // ========== PRODUCT 2: RUNNING SHOES (Color × Size = 24 SKUs) ==========
+  const shoesProduct = await prisma.product.upsert({
+    where: { id: 'prod-shoes' },
+    update: {},
+    create: {
+      id: 'prod-shoes',
+      vendorId: fashionHub.id,
+      categoryId: 'cat-clothing',
+      name: 'Pro Running Shoes',
+      slug: 'pro-running-shoes',
+      description: 'Lightweight running shoes with superior cushioning',
+      price: 129.99,
+      sku: 'SHOES001',
+      quantity: 200,
+      status: 'APPROVED',
+      isActive: true,
+      hasVariations: true,
+    },
+  });
+
+  await prisma.productVariation.createMany({
+    data: [
+      { productId: shoesProduct.id, name: 'Color', options: ['Red', 'Blue', 'Black', 'White'] },
+      { productId: shoesProduct.id, name: 'Size', options: ['7', '8', '9', '10', '11', '12'] },
+    ],
+  });
+
+  const shoeColorOptions = ['Red', 'Blue', 'Black', 'White'];
+  const shoeSizeOptions = ['7', '8', '9', '10', '11', '12'];
+  for (const color of shoeColorOptions) {
+    for (const size of shoeSizeOptions) {
+      await prisma.productInventory.create({
+        data: {
+          productId: shoesProduct.id,
+          sku: 'SHOES-' + color.toUpperCase() + '-' + size,
+          price: 119.99 + (color === 'Red' ? 10 : 0),
+          quantity: Math.floor(Math.random() * 30) + 5,
+          lowStock: 3,
+          options: [color, size],
+          isActive: true,
+        },
+      });
+    }
+  }
+  console.log('✅ Created Running Shoes with 24 SKU variations');
+
+  // ========== PRODUCT 3: LAPTOP (Storage × RAM = 12 SKUs) ==========
+  const laptopProduct = await prisma.product.upsert({
+    where: { id: 'prod-laptop' },
+    update: {},
+    create: {
+      id: 'prod-laptop',
+      vendorId: techStore.id,
+      categoryId: 'cat-electronics',
+      name: 'UltraBook Pro',
+      slug: 'ultrabook-pro',
+      description: 'Thin and light laptop for professionals',
+      price: 999.00,
+      sku: 'LAPTOP001',
+      quantity: 100,
+      status: 'APPROVED',
+      isActive: true,
+      hasVariations: true,
+    },
+  });
+
+  await prisma.productVariation.createMany({
+    data: [
+      { productId: laptopProduct.id, name: 'Storage', options: ['256GB', '512GB', '1TB', '2TB'] },
+      { productId: laptopProduct.id, name: 'RAM', options: ['8GB', '16GB', '32GB'] },
+    ],
+  });
+
+  const storageOptions = ['256GB', '512GB', '1TB', '2TB'];
+  const ramOptions = ['8GB', '16GB', '32GB'];
+  for (const storage of storageOptions) {
+    for (const ram of ramOptions) {
+      let price = 999.00;
+      if (storage === '512GB') price += 150;
+      if (storage === '1TB') price += 300;
+      if (storage === '2TB') price += 500;
+      if (ram === '16GB') price += 100;
+      if (ram === '32GB') price += 250;
+      await prisma.productInventory.create({
+        data: {
+          productId: laptopProduct.id,
+          sku: 'LAPTOP-' + storage.replace('TB', 'T').replace('GB', 'G') + '-' + ram.replace('GB', 'G'),
+          price: price,
+          quantity: Math.floor(Math.random() * 20) + 5,
+          lowStock: 2,
+          options: [storage, ram],
+          isActive: true,
+        },
+      });
+    }
+  }
+  console.log('✅ Created Laptop with 12 SKU variations');
+
+  // ========== PRODUCT 4: HOODIE (Color × Size = 20 SKUs) ==========
+  const hoodieProduct = await prisma.product.upsert({
+    where: { id: 'prod-hoodie' },
+    update: {},
+    create: {
+      id: 'prod-hoodie',
+      vendorId: fashionHub.id,
+      categoryId: 'cat-clothing',
+      name: 'Classic Pullover Hoodie',
+      slug: 'classic-pullover-hoodie',
+      description: 'Warm and cozy hoodie for all seasons',
+      price: 59.99,
+      sku: 'HOODIE001',
+      quantity: 300,
+      status: 'APPROVED',
+      isActive: true,
+      hasVariations: true,
+    },
+  });
+
+  await prisma.productVariation.createMany({
+    data: [
+      { productId: hoodieProduct.id, name: 'Color', options: ['Black', 'Gray', 'Burgundy', 'Forest Green'] },
+      { productId: hoodieProduct.id, name: 'Size', options: ['XS', 'S', 'M', 'L', 'XL'] },
+    ],
+  });
+
+  const hoodieColorOptions = ['Black', 'Gray', 'Burgundy', 'Forest Green'];
+  const hoodieSizeOptions = ['XS', 'S', 'M', 'L', 'XL'];
+  for (const color of hoodieColorOptions) {
+    for (const size of hoodieSizeOptions) {
+      const isPremiumColor = color === 'Burgundy' || color === 'Forest Green';
+      await prisma.productInventory.create({
+        data: {
+          productId: hoodieProduct.id,
+          sku: 'HOODIE-' + (color.split(' ')[0]).toUpperCase() + '-' + size,
+          price: isPremiumColor ? 64.99 : 59.99,
+          quantity: Math.floor(Math.random() * 40) + 10,
+          lowStock: 5,
+          options: [color, size],
+          isActive: true,
+        },
+      });
+    }
+  }
+  console.log('✅ Created Hoodie with 20 SKU variations');
+
+  // ========== SAMPLE CART WITH VARIATIONS ==========
+  const tshirtInv = await prisma.productInventory.findFirst({ where: { productId: 'prod-tshirt' } });
+  const shoesInv = await prisma.productInventory.findFirst({ where: { productId: 'prod-shoes' } });
+
+  if (tshirtInv && shoesInv) {
+    await prisma.cartItem.createMany({
+      data: [
+        { userId: customer1.id, productId: 'prod-airpods', quantity: 1 },
+        { userId: customer1.id, productId: tshirtInv.productId, inventoryId: tshirtInv.id, quantity: 2 },
+        { userId: customer1.id, productId: shoesInv.productId, inventoryId: shoesInv.id, quantity: 1 },
+      ],
+      skipDuplicates: true,
+    });
+  }
+  console.log('✅ Created sample cart items with variations');
+
+  // ========== SAMPLE ADDRESSES ==========
   await prisma.address.createMany({
     data: [
-      {
-        userId: customer1.id,
-        firstName: 'John',
-        lastName: 'Doe',
-        address1: '123 Main Street',
-        city: 'San Francisco',
-        state: 'CA',
-        postalCode: '94102',
-        country: 'USA',
-        phone: '+1 234 567 8900',
-        isDefault: true,
-      },
-      {
-        userId: customer2.id,
-        firstName: 'Jane',
-        lastName: 'Smith',
-        address1: '456 Market Street',
-        city: 'San Francisco',
-        state: 'CA',
-        postalCode: '94103',
-        country: 'USA',
-        phone: '+1 234 567 8901',
-        isDefault: true,
-      },
+      { userId: customer1.id, firstName: 'John', lastName: 'Doe', address1: '123 Main Street', city: 'San Francisco', state: 'CA', postalCode: '94102', country: 'USA', phone: '+1 234 567 8900', isDefault: true },
+      { userId: customer2.id, firstName: 'Jane', lastName: 'Smith', address1: '456 Market Street', city: 'San Francisco', state: 'CA', postalCode: '94103', country: 'USA', phone: '+1 234 567 8901', isDefault: true },
     ],
     skipDuplicates: true,
   });
   console.log('✅ Created sample addresses');
 
-  // Create Sample Reviews
+  // ========== SAMPLE REVIEWS ==========
   await prisma.review.createMany({
     data: [
-      {
-        productId: 'prod-iphone15',
-        userId: customer1.id,
-        rating: 5,
-        title: 'Amazing phone!',
-        comment: 'Best iPhone ever! Camera is incredible.',
-      },
-      {
-        productId: 'prod-iphone15',
-        userId: customer2.id,
-        rating: 4,
-        title: 'Great but expensive',
-        comment: 'Love the features, but the price is steep.',
-      },
-      {
-        productId: 'prod-tshirt',
-        userId: customer1.id,
-        rating: 5,
-        title: 'Very comfortable',
-        comment: 'Great quality cotton, fits perfectly.',
-      },
+      { productId: 'prod-iphone15', userId: customer1.id, rating: 5, title: 'Amazing phone!', comment: 'Best iPhone ever!' },
+      { productId: 'prod-iphone15', userId: customer2.id, rating: 4, title: 'Great but expensive', comment: 'Love the features.' },
+      { productId: 'prod-tshirt', userId: customer1.id, rating: 5, title: 'Very comfortable', comment: 'Great quality cotton.' },
     ],
     skipDuplicates: true,
   });
   console.log('✅ Created sample reviews');
 
-  // Create Sample Cart Items
-  await prisma.cartItem.createMany({
-    data: [
-      {
-        userId: customer1.id,
-        productId: 'prod-airpods',
-        quantity: 1,
-      },
-      {
-        userId: customer1.id,
-        productId: 'prod-tshirt',
-        quantity: 2,
-      },
-    ],
-    skipDuplicates: true,
-  });
-  console.log('✅ Created sample cart items');
+  console.log('');
+  console.log('🎉 Seeding completed!');
+  console.log('');
+  console.log('📦 Total Products: 7 (3 simple + 4 with variations)');
+  console.log('📊 Total SKUs: 86');
+  console.log('');
 
-  console.log('');
-  console.log('🎉 Database seeding completed!');
-  console.log('');
-  console.log('Sample Accounts:');
-  console.log('─────────────────────');
-  console.log('Admin: admin@crafty.com (admin role)');
-  console.log('Customer: john@example.com');
-  console.log('Customer: jane@example.com');
-  console.log('Vendor: vendor1@techstore.com');
-  console.log('Vendor: vendor2@fashionhub.com');
-  console.log('');
-  console.log('Note: Passwords are placeholders. Register new users via API.');
 }
 
 main()

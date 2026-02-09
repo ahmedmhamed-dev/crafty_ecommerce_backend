@@ -1,0 +1,127 @@
+{
+  "info": {
+    "_postman_id": "crafty-ecommerce-updated",
+    "name": "Crafty E-Commerce API - Updated",
+    "description": "Multi-vendor e-commerce backend with product variations support",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "apiVersion", "value": "/api/v1" },
+    { "key": "token", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "vendorId", "value": "" },
+    { "key": "productId", "value": "" },
+    { "key": "inventoryId", "value": "" },
+    { "key": "orderId", "value": "" }
+  ],
+  "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}" }] },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        { "name": "GET /health", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] } } },
+        { "name": "GET /health/ready", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/health/ready", "host": ["{{baseUrl}}"], "path": ["health", "ready"] } } },
+        { "name": "GET /health/live", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/health/live", "host": ["{{baseUrl}}"], "path": ["health", "live"] } } }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST Register",
+          "event": [{ "listen": "test", "script": { "exec": ["var d=pm.response.json();if(d.accessToken)pm.collectionVariables.set('token',d.accessToken);if(d.user&&d.user.id)pm.collectionVariables.set('userId',d.user.id);"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"new@example.com\",\"password\":\"pass123\",\"firstName\":\"User\",\"lastName\":\"Test\"}" }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/auth/register", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "auth", "register"] } }
+        },
+        {
+          "name": "POST Login",
+          "event": [{ "listen": "test", "script": { "exec": ["var d=pm.response.json();if(d.accessToken)pm.collectionVariables.set('token',d.accessToken);"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"john@example.com\",\"password\":\"password123\"}" }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/auth/login", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "auth", "login"] } }
+        },
+        { "name": "GET Profile", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}{{apiVersion}}/auth/profile", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "auth", "profile"] } } }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "GET All Products",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}{{apiVersion}}/products", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "products"] } }
+        },
+        {
+          "name": "GET Product with Variations",
+          "event": [{ "listen": "test", "script": { "exec": ["var d=pm.response.json();if(d.id)pm.collectionVariables.set('productId',d.id);if(d.inventory&&d.inventory[0])pm.collectionVariables.set('inventoryId',d.inventory[0].id);"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}{{apiVersion}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "products", "{{productId}}"] } }
+        },
+        {
+          "name": "POST Create Simple Product",
+          "event": [{ "listen": "test", "script": { "exec": ["var d=pm.response.json();if(d.id)pm.collectionVariables.set('productId',d.id);"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"name\":\"Widget\",\"description\":\"A simple product\",\"price\":29.99,\"categoryId\":\"cat-electronics\",\"sku\":\"WDG001\",\"quantity\":100,\"hasVariations\":false}" }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/products", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "products"] } }
+        },
+        {
+          "name": "POST Create Product with Variations",
+          "event": [{ "listen": "test", "script": { "exec": ["var d=pm.response.json();if(d.id)pm.collectionVariables.set('productId',d.id);"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"name\":\"T-Shirt\",\"description\":\"Cotton t-shirt\",\"price\":24.99,\"categoryId\":\"cat-clothing\",\"hasVariations\":true,\"variations\":[{\"name\":\"Color\",\"options\":[\"Red\",\"Blue\",\"Black\"]},{\"name\":\"Size\",\"options\":[\"S\",\"M\",\"L\",\"XL\"]}],\"inventory\":[{\"sku\":\"TSHIRT-RED-M\",\"price\":24.99,\"quantity\":50,\"options\":[\"Red\",\"M\"]},{\"sku\":\"TSHIRT-BLUE-L\",\"price\":24.99,\"quantity\":30,\"options\":[\"Blue\",\"L\"]}]}" }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/products", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "products"] } }
+        },
+        {
+          "name": "GET My Products (Vendor)",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}{{apiVersion}}/products/vendor/me", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "products", "vendor", "me"] } }
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        { "name": "GET Cart", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}{{apiVersion}}/cart", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "cart"] } } },
+        {
+          "name": "POST Add Simple Product",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"productId\":\"{{productId}}\",\"quantity\":2}" }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/cart", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "cart"] } }
+        },
+        {
+          "name": "POST Add Variation Product",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"productId\":\"{{productId}}\",\"inventoryId\":\"{{inventoryId}}\",\"quantity\":1}" }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/cart", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "cart"] } }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        { "name": "POST Create Order", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}{{apiVersion}}/orders", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "orders"] } } },
+        { "name": "GET My Orders", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}{{apiVersion}}/orders", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "orders"] } } }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        { "name": "GET All", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}{{apiVersion}}/categories", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "categories"] } } }
+      ]
+    },
+    {
+      "name": "Vendors",
+      "item": [
+        { "name": "GET All", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}{{apiVersion}}/vendors", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "vendors"] } } },
+        { "name": "GET My Profile", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}{{apiVersion}}/vendors/me", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "vendors", "me"] } } }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        { "name": "POST Create", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"productId\":\"{{productId}}\",\"rating\":5,\"title\":\"Great!\",\"comment\":\"Love it\"}" }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/reviews", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "reviews"] } } }
+      ]
+    },
+    {
+      "name": "Wishlist",
+      "item": [
+        { "name": "GET", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}{{apiVersion}}/wishlist", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "wishlist"] } } },
+        { "name": "POST Add", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"productId\":\"{{productId}}\"}" }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/wishlist", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "wishlist"] } } }
+      ]
+    },
+    {
+      "name": "Addresses",
+      "item": [
+        { "name": "GET", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}{{apiVersion}}/addresses", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "addresses"] } } },
+        { "name": "POST Create", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address1\":\"123 Main St\",\"city\":\"NYC\",\"state\":\"NY\",\"postalCode\":\"10001\",\"country\":\"USA\"}" }, "url": { "raw": "{{baseUrl}}{{apiVersion}}/addresses", "host": ["{{baseUrl}}"], "path": ["{{apiVersion}}", "addresses"] } } }
+      ]
+    }
+  ]
+}

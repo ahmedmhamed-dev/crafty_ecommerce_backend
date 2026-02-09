@@ -99,8 +99,8 @@ model Vendor {
   bankAccount     String?
   bankRouting     String?
   taxNumber       String?
-  commissionRate  Float         @default(10) // Platform commission percentage
-  status          VendorStatus @default(PENDING)
+  commissionRate  Float         @default(10)
+  status          VendorStatus  @default(PENDING)
   rating          Float         @default(0)
   totalSales      Float         @default(0)
   totalOrders     Int           @default(0)
@@ -152,17 +152,20 @@ model Product {
   quantity     Int           @default(0)
   lowStock     Int           @default(10)
   weight       Float?
-  dimensions   String?       // JSON string for length, width, height
+  dimensions   String?
   status       ProductStatus @default(DRAFT)
   isFeatured   Boolean       @default(false)
   isActive     Boolean       @default(true)
+  hasVariations Boolean     @default(false)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
   // Relations
-  vendor       Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  category     Category      @relation(fields: [categoryId], references: [id])
+  vendor       Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category     Category            @relation(fields: [categoryId], references: [id])
   images       ProductImage[]
+  variations   ProductVariation[]
+  inventory    ProductInventory[]
   cartItems    CartItem[]
   orderItems   OrderItem[]
   wishlist     Wishlist[]
@@ -188,11 +191,51 @@ model ProductImage {
   @@map("product_images")
 }
 
+// ==================== PRODUCT VARIATION MODEL ====================
+// Example: "Color", "Size" with options stored as JSON
+model ProductVariation {
+  id         String     @id @default(uuid())
+  productId  String
+  name       String     // e.g., "Color", "Size"
+  options    String[]  // ["Red", "Blue", "Green"] or ["S", "M", "L", "XL"]
+  createdAt  DateTime  @default(now())
+
+  // Relations
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_variations")
+}
+
+// ==================== PRODUCT INVENTORY MODEL ====================
+// Inventory for specific variation combination
+model ProductInventory {
+  id           String   @id @default(uuid())
+  productId    String
+  sku          String   @unique
+  price        Float    @default(0)
+  comparePrice Float?
+  quantity     Int      @default(0)
+  lowStock     Int      @default(5)
+  weight       Float?
+  imageUrl     String?
+  options      String[] // ["Red", "L"] for Color:Red, Size:L
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+
+  @@map("product_inventory")
+}
+
 // ==================== ADDRESS MODEL ====================
 model Address {
   id          String   @id @default(uuid())
   userId      String
-  type        String   @default("shipping") // shipping, billing
+  type        String   @default("shipping")
   firstName   String
   lastName    String
   company     String?
@@ -215,18 +258,20 @@ model Address {
 
 // ==================== CART MODEL ====================
 model CartItem {
-  id         String   @id @default(uuid())
-  userId     String
-  productId  String
-  quantity   Int      @default(1)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String            @id @default(uuid())
+  userId       String
+  productId    String
+  inventoryId  String?
+  quantity     Int               @default(1)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   // Relations
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product      Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventory    ProductInventory? @relation(fields: [inventoryId], references: [id])
 
-  @@unique([userId, productId])
+  @@unique([userId, productId, inventoryId])
   @@map("cart_items")
 }
 
@@ -262,21 +307,24 @@ model Order {
 
 // ==================== ORDER ITEM MODEL ====================
 model OrderItem {
-  id          String   @id @default(uuid())
-  orderId     String
-  productId   String
-  vendorId    String
-  name        String
-  sku         String?
-  price       Float
-  quantity    Int
-  total       Float
-  createdAt   DateTime @default(now())
+  id           String            @id @default(uuid())
+  orderId      String
+  productId    String
+  inventoryId  String?
+  vendorId     String
+  name         String
+  sku          String?
+  price        Float
+  quantity     Int
+  total        Float
+  options      String[]         // ["Red", "L"] - selected options
+  createdAt    DateTime          @default(now())
 
   // Relations
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product  @relation(fields: [productId], references: [id])
-  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  order        Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product           @relation(fields: [productId], references: [id])
+  inventory    ProductInventory? @relation(fields: [inventoryId], references: [id])
+  vendor       Vendor            @relation(fields: [vendorId], references: [id])
 
   @@map("order_items")
 }
@@ -285,12 +333,12 @@ model OrderItem {
 model Payment {
   id              String        @id @default(uuid())
   orderId         String        @unique
-  method           String?       // credit_card, paypal, bank_transfer, etc.
+  method          String?
   amount          Float
   currency        String        @default("USD")
   status          PaymentStatus @default(PENDING)
   transactionId   String?
-  paymentData     String?       // JSON for additional payment info
+  paymentData     String?
   paidAt          DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -306,7 +354,7 @@ model Review {
   id        String   @id @default(uuid())
   userId    String
   productId String
-  rating    Int      // 1-5
+  rating    Int
   title     String?
   comment   String?
   isActive  Boolean  @default(true)

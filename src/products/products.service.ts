@@ -44,7 +44,14 @@ export class ProductsService {
   async findById(id: string) {
     const product = await this.prisma.product.findUnique({
       where: { id },
-      include: { images: { orderBy: { sortOrder: 'asc' } }, category: true, vendor: true, reviews: { include: { user: { select: { firstName: true } } } } },
+      include: {
+        images: { orderBy: { sortOrder: 'asc' } },
+        category: true,
+        vendor: true,
+        reviews: { include: { user: { select: { firstName: true } } } },
+        variations: true,
+        inventory: { where: { isActive: true }, orderBy: { sku: 'asc' } },
+      },
     });
     if (!product) throw new NotFoundException('Product not found');
     return product;
@@ -74,7 +81,7 @@ export class ProductsService {
         where: { vendorId: vendor?.id },
         skip,
         take: limit,
-        include: { images: true },
+        include: { images: true, variations: true, inventory: { where: { isActive: true } } },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.product.count({ where: { vendorId: vendor?.id } }),

@@ -9,13 +9,20 @@ A comprehensive multi-vendor e-commerce backend API built with NestJS, PostgreSQ
 - **JWT Authentication** - Secure authentication with role-based access control
 - **Product Management** - Full CRUD operations with image gallery support
 - **Category System** - Hierarchical categories for products
-- **Shopping Cart** - Complete cart management
+- **Shopping Cart** - Complete cart management with variation support
 - **Order Processing** - Order creation, tracking, and status updates
 - **Payment Tracking** - Payment status tracking
 - **Product Reviews** - Rating and review system
 - **Wishlist** - Users can save products to wishlist
 - **Address Management** - Multiple shipping addresses per user
 - **Admin Dashboard** - User and vendor management, product approval
+
+### Product Variations
+- **Multiple Variation Types** - Color, Size, Material, etc.
+- **SKU Management** - Unique SKU for each variation combination
+- **Inventory Tracking** - Per-SKU stock levels
+- **Price Variations** - Different prices per variation
+- **Image per Variation** - Optional images for each SKU
 
 ### Security
 - **Helmet** - HTTP security headers (XSS protection, content-type sniffing, clickjacking, HSTS)
@@ -109,6 +116,111 @@ Sample data includes:
 - 4 Product categories
 - 6 Sample products (3 electronics, 3 clothing)
 - Sample addresses, reviews, and cart items
+
+## 📦 Product Variations
+
+### Overview
+
+Products can have multiple variation types (e.g., Color, Size). Each combination creates a unique SKU with its own:
+- Price
+- Quantity/Stock
+- Image
+- SKU code
+
+### Example: T-Shirt with Color & Size
+
+```json
+{
+  "name": "Premium T-Shirt",
+  "description": "High-quality cotton t-shirt",
+  "price": 29.99,
+  "categoryId": "uuid",
+  "hasVariations": true,
+  "variations": [
+    {
+      "name": "Color",
+      "options": ["Red", "Blue", "Green", "Black"]
+    },
+    {
+      "name": "Size",
+      "options": ["S", "M", "L", "XL"]
+    }
+  ],
+  "inventory": [
+    {
+      "sku": "TSHIRT-RED-M",
+      "price": 29.99,
+      "quantity": 50,
+      "imageUrl": "/images/tshirt-red.jpg",
+      "options": ["Red", "M"]
+    },
+    {
+      "sku": "TSHIRT-BLUE-L",
+      "price": 32.99,
+      "quantity": 30,
+      "imageUrl": "/images/tshirt-blue.jpg",
+      "options": ["Blue", "L"]
+    }
+  ]
+}
+```
+
+### Creating Products with Variations
+
+```typescript
+POST /products
+{
+  "name": "T-Shirt",
+  "price": 29.99,
+  "categoryId": "uuid",
+  "hasVariations": true,
+  "variations": [
+    { "name": "Color", "options": ["Red", "Blue", "Green"] },
+    { "name": "Size", "options": ["S", "M", "L", "XL"] }
+  ],
+  "inventory": [
+    { "sku": "TSHIRT-RED-M", "price": 29.99, "quantity": 10, "options": ["Red", "M"] },
+    { "sku": "TSHIRT-BLUE-L", "price": 29.99, "quantity": 5, "options": ["Blue", "L"] }
+  ]
+}
+```
+
+### Adding Variation to Cart
+
+When adding a product with variations to cart, specify the inventory ID:
+
+```typescript
+POST /cart
+{
+  "productId": "product-uuid",
+  "inventoryId": "inventory-uuid",  // Specific SKU
+  "quantity": 2
+}
+```
+
+### Inventory Management
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `sku` | String | Unique SKU code |
+| `price` | Float | Price for this variation |
+| `comparePrice` | Float? | Original price (for显示折扣) |
+| `quantity` | Int | Stock quantity |
+| `lowStock` | Int | Low stock threshold |
+| `weight` | Float? | Weight for shipping |
+| `imageUrl` | String? | Variation-specific image |
+| `options` | String[] | Selected options (e.g., ["Red", "L"]) |
+| `isActive` | Boolean | Enable/disable SKU |
+
+### Variation Combinations
+
+For N variation types with M options each:
+- **Total SKUs** = M₁ × M₂ × ... × Mₙ
+
+Examples:
+- Color (4) × Size (4) = **16 SKUs**
+- Color (5) × Size (4) × Material (2) = **40 SKUs**
+- Size (6) = **6 SKUs**
 
 ## ⚙️ Configuration
 
@@ -325,16 +437,26 @@ src/
 ├── users/                               # User management
 ├── vendors/                             # Vendor management
 ├── products/                            # Product management
+│   ├── products.controller.ts
+│   ├── products.service.ts
+│   ├── products.module.ts
+│   └── dto/
+│       ├── product.dto.ts
+│       └── variation.dto.ts            # Variation DTOs
 ├── categories/                          # Category management
 ├── cart/                                # Shopping cart
+│   ├── cart.controller.ts
+│   ├── cart.service.ts                 # Updated for variations
+│   └── dto/
+│       └── cart.dto.ts                 # Updated with inventoryId
 ├── orders/                              # Order processing
 │   ├── orders.service.ts
 │   └── dto/
 ├── payments/                            # Payment processing
-│   └── common/payment/                  # Payment gateway modules
-│       ├── interfaces/                  # Gateway interfaces
+│   └── common/payment/                 # Payment gateway modules
+│       ├── interfaces/
 │       │   └── payment-gateway.interface.ts
-│       ├── gateways/                    # Gateway implementations
+│       ├── gateways/
 │       │   ├── stripe.gateway.ts
 │       │   ├── paypal.gateway.ts
 │       │   ├── bank-transfer.gateway.ts
@@ -346,21 +468,12 @@ src/
 ├── addresses/                           # Address management
 ├── admin/                               # Admin dashboard
 ├── upload/                              # File uploads
-└── common/                              # Shared utilities
+└── common/                               # Shared utilities
     ├── guards/                          # Auth guards
-    │   └── index.ts
     ├── decorators/                      # Custom decorators
-    │   └── index.ts
     ├── prisma/                          # Prisma service
-    │   ├── prisma.module.ts
-    │   └── prisma.service.ts
-    ├── email/                           # Email service + BullMQ queue
-    │   ├── email.service.ts
-    │   ├── email-queue.service.ts
-    │   ├── email.module.ts
-    │   ├── index.ts
-    │   └── templates/                   # Email HTML templates
-    └── interfaces/                      # Common interfaces
+    ├── email/                           # Email + BullMQ queue
+    └── interfaces/                       # Common interfaces
 ```
 
 ## 🧪 Testing
@@ -433,41 +546,4 @@ node dist/main.js
 | `VENDOR_DASHBOARD_URL` | Vendor dashboard URL | Yes |
 | `CSRF_SECRET` | CSRF protection secret | Production |
 | `STRIPE_SECRET_KEY` | Stripe secret key | For Stripe |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | For Stripe |
-| `PAYPAL_CLIENT_ID` | PayPal client ID | For PayPal |
-| `PAYPAL_CLIENT_SECRET` | PayPal client secret | For PayPal |
-| `PAYPAL_SANDBOX` | Use sandbox mode | For PayPal |
-
-## 🏗️ Architecture Patterns
-
-- **Dependency Injection** - NestJS built-in DI container
-- **Module Pattern** - Feature-based modular architecture
-- **Service Layer** - Business logic in services
-- **Repository Pattern** - Prisma as data access layer
-- **Factory Pattern** - Payment gateway factory
-- **Observer Pattern** - BullMQ job processing
-- **Strategy Pattern** - Swappable payment gateways
-
-## 📊 Database Models
-
-| Model | Description |
-|-------|-------------|
-| `User` | User accounts with role (CUSTOMER, VENDOR, ADMIN) |
-| `Vendor` | Vendor profiles with store info, approval status |
-| `Product` | Products with images, pricing, inventory, vendor |
-| `Category` | Hierarchical product categories |
-| `CartItem` | Shopping cart items with quantity |
-| `Order` | Orders with status tracking, total |
-| `OrderItem` | Individual items within an order |
-| `Payment` | Payment records with method, status |
-| `Review` | Product reviews with ratings |
-| `Wishlist` | User's saved products |
-| `Address` | User shipping addresses |
-
-## 📝 License
-
-MIT License
-
-## 🤝 Contributing
-
-Pull requests are welcome. For major changes, please open an issue first.
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret | For
