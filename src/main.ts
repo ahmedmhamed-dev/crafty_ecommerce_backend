@@ -1,10 +1,33 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import helmet from 'helmet';
+import csurf from 'csurf';
+import cookieParser from 'cookie-parser';
+import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Security: Helmet for HTTP headers
+  app.use(helmet());
+
+  // Security: CSRF protection
+  // Requires a secret (use environment variable in production)
+  app.use(cookieParser());
+  // CSRF middleware with cookie-based token
+  const csrfMiddleware = csurf({ 
+    cookie: { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production' },
+    ignoreMethods: ['GET', 'HEAD', 'OPTIONS'],
+  });
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // Skip CSRF for auth endpoints
+    if (req.path.startsWith('/api/v1/auth/login') || req.path.startsWith('/api/v1/auth/register') || req.path.startsWith('/docs')) {
+      return next();
+    }
+    csrfMiddleware(req, res, next);
+  });
 
   // Enable CORS
   app.enableCors({
